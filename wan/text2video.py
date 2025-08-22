@@ -121,7 +121,8 @@ class WanT2V:
                  guide_scale=5.0,
                  n_prompt="",
                  seed=-1,
-                 offload_model=True):
+                 offload_model=True,
+                 progress_callback=None):
         r"""
         Generates video frames from text prompt using diffusion process.
 
@@ -146,6 +147,9 @@ class WanT2V:
                 Random seed for noise generation. If -1, use random seed.
             offload_model (`bool`, *optional*, defaults to True):
                 If True, offloads models to CPU during generation to save VRAM
+            progress_callback (`callable`, *optional*, defaults to None):
+                Callback function for progress updates. Should accept (step, total_steps, current_timestep) as arguments.
+                If None, uses default tqdm progress bar.
 
         Returns:
             torch.Tensor:
@@ -230,28 +234,62 @@ class WanT2V:
             arg_c = {'context': context, 'seq_len': seq_len}
             arg_null = {'context': context_null, 'seq_len': seq_len}
 
-            for _, t in enumerate(tqdm(timesteps)):
-                latent_model_input = latents
-                timestep = [t]
+            # 使用进度回调或默认tqdm
+            if progress_callback is not None:
+                # 使用自定义进度回调
+                for step, t in enumerate(timesteps):
+                    # 调用进度回调函数
+                    try:
+                        progress_callback(step, len(timesteps), t.item())
+                    except Exception as e:
+                        # 如果回调函数出错，记录错误但继续执行
+                        logging.warning(f"Progress callback error: {e}")
+                    
+                    latent_model_input = latents
+                    timestep = [t]
 
-                timestep = torch.stack(timestep)
+                    timestep = torch.stack(timestep)
 
-                self.model.to(self.device)
-                noise_pred_cond = self.model(
-                    latent_model_input, t=timestep, **arg_c)[0]
-                noise_pred_uncond = self.model(
-                    latent_model_input, t=timestep, **arg_null)[0]
+                    self.model.to(self.device)
+                    noise_pred_cond = self.model(
+                        latent_model_input, t=timestep, **arg_c)[0]
+                    noise_pred_uncond = self.model(
+                        latent_model_input, t=timestep, **arg_null)[0]
 
-                noise_pred = noise_pred_uncond + guide_scale * (
-                    noise_pred_cond - noise_pred_uncond)
+                    noise_pred = noise_pred_uncond + guide_scale * (
+                        noise_pred_cond - noise_pred_uncond)
 
-                temp_x0 = sample_scheduler.step(
-                    noise_pred.unsqueeze(0),
-                    t,
-                    latents[0].unsqueeze(0),
-                    return_dict=False,
-                    generator=seed_g)[0]
-                latents = [temp_x0.squeeze(0)]
+                    temp_x0 = sample_scheduler.step(
+                        noise_pred.unsqueeze(0),
+                        t,
+                        latents[0].unsqueeze(0),
+                        return_dict=False,
+                        generator=seed_g)[0]
+                    latents = [temp_x0.squeeze(0)]
+            else:
+                # 使用默认的tqdm进度条（保持向后兼容）
+                for _, t in enumerate(tqdm(timesteps)):
+                    latent_model_input = latents
+                    timestep = [t]
+
+                    timestep = torch.stack(timestep)
+
+                    self.model.to(self.device)
+                    noise_pred_cond = self.model(
+                        latent_model_input, t=timestep, **arg_c)[0]
+                    noise_pred_uncond = self.model(
+                        latent_model_input, t=timestep, **arg_null)[0]
+
+                    noise_pred = noise_pred_uncond + guide_scale * (
+                        noise_pred_cond - noise_pred_uncond)
+
+                    temp_x0 = sample_scheduler.step(
+                        noise_pred.unsqueeze(0),
+                        t,
+                        latents[0].unsqueeze(0),
+                        return_dict=False,
+                        generator=seed_g)[0]
+                    latents = [temp_x0.squeeze(0)]
 
             x0 = latents
             if offload_model:

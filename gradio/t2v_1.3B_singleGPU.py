@@ -30,45 +30,80 @@ def prompt_enc(prompt, tar_lang):
 
 
 def t2v_generation(txt2vid_prompt, resolution, sd_steps, guide_scale,
-                   shift_scale, seed, n_prompt, offload_model_ui):
+                   shift_scale, seed, n_prompt, offload_model_ui, progress=gr.Progress()):
     global wan_t2v, args  # 添加args全局变量访问
     # print(f"{txt2vid_prompt},{resolution},{sd_steps},{guide_scale},{shift_scale},{seed},{n_prompt}")
 
-    W = int(resolution.split("*")[0])
-    H = int(resolution.split("*")[1])
-    
-    # 优先级：命令行参数 > 界面基础参数
-    actual_shift = float(args.sample_shift) if hasattr(args, 'sample_shift') else float(shift_scale)
-    actual_guide_scale = float(args.sample_guide_scale) if hasattr(args, 'sample_guide_scale') else float(guide_scale)
-    actual_offload = bool(args.offload_model) if hasattr(args, 'offload_model') else bool(offload_model_ui)
-    
-    # T5 CPU设置：使用命令行参数，默认为True（开启）
-    actual_t5_cpu = args.t5_cpu
-    
-    print(f"生成参数: 分辨率={W}x{H}, 偏移={actual_shift}, 引导比例={actual_guide_scale}, 卸载={actual_offload}, T5_CPU={actual_t5_cpu}")
-    print(f"命令行参数: sample_shift={getattr(args, 'sample_shift', 'N/A')}, sample_guide_scale={getattr(args, 'sample_guide_scale', 'N/A')}, offload_model={getattr(args, 'offload_model', 'N/A')}, t5_cpu={getattr(args, 't5_cpu', 'N/A')}")
-    print(f"界面基础参数: guide_scale={guide_scale}, shift_scale={shift_scale}")
-    print(f"界面高级参数: offload_model={offload_model_ui}")
-    
-    video = wan_t2v.generate(
-        txt2vid_prompt,
-        size=(W, H),
-        shift=actual_shift,  # 使用优先级最高的参数
-        sampling_steps=sd_steps,
-        guide_scale=actual_guide_scale,  # 使用优先级最高的参数
-        n_prompt=n_prompt,
-        seed=seed,
-        offload_model=actual_offload)  # 使用优先级最高的参数
-
-    cache_video(
-        tensor=video[None],
-        save_file="example.mp4",
-        fps=16,
-        nrow=1,
-        normalize=True,
-        value_range=(-1, 1))
-
-    return "example.mp4"
+    try:
+        W = int(resolution.split("*")[0])
+        H = int(resolution.split("*")[1])
+        
+        # 优先级：命令行参数 > 界面基础参数
+        actual_shift = float(args.sample_shift) if hasattr(args, 'sample_shift') else float(shift_scale)
+        actual_guide_scale = float(args.sample_guide_scale) if hasattr(args, 'sample_guide_scale') else float(guide_scale)
+        actual_offload = bool(args.offload_model) if hasattr(args, 'offload_model') else bool(offload_model_ui)
+        
+        # T5 CPU设置：使用命令行参数，默认为True（开启）
+        actual_t5_cpu = args.t5_cpu
+        
+        print(f"生成参数: 分辨率={W}x{H}, 偏移={actual_shift}, 引导比例={actual_guide_scale}, 卸载={actual_offload}, T5_CPU={actual_t5_cpu}")
+        print(f"命令行参数: sample_shift={getattr(args, 'sample_shift', 'N/A')}, sample_guide_scale={getattr(args, 'sample_guide_scale', 'N/A')}, offload_model={getattr(args, 'offload_model', 'N/A')}, t5_cpu={getattr(args, 't5_cpu', 'N/A')}")
+        print(f"界面基础参数: guide_scale={guide_scale}, shift_scale={shift_scale}")
+        print(f"界面高级参数: offload_model={offload_model_ui}")
+        
+        # 更新进度和状态
+        progress(0.01, desc="初始化模型...")
+        
+        # 简化的进度回调函数
+        def progress_callback(step, total_steps_count, current_timestep):
+            """扩散步骤进度回调函数"""
+            # 计算真实进度：1%初始化 + 89%扩散 + 10%保存
+            progress_value = 0.01 + 0.89 * (step / total_steps_count)
+            desc = f"扩散步骤 {step + 1}/{total_steps_count} (时间步: {current_timestep:.2f})"
+            
+            print(f"后台线程 - 进度: {progress_value:.2f} - {desc}")
+            
+            # 直接更新Gradio进度条
+            try:
+                progress(progress_value, desc)
+            except Exception as e:
+                print(f"进度更新错误: {e}")
+        
+        # 直接调用模型生成，不使用多线程
+        print(f"开始生成视频...")
+        video = wan_t2v.generate(
+            txt2vid_prompt,
+            size=(W, H),
+            shift=actual_shift,
+            sampling_steps=sd_steps,
+            guide_scale=actual_guide_scale,
+            n_prompt=n_prompt,
+            seed=seed,
+            offload_model=actual_offload,
+            progress_callback=progress_callback)  # 使用简化的进度回调
+        
+        if video is None:
+            raise Exception("视频生成失败")
+        
+        # 更新进度
+        progress(0.9, desc="生成视频完成，正在保存...")
+        
+        # 保存视频
+        cache_video(
+            tensor=video[None],
+            save_file="example.mp4",
+            fps=16,
+            nrow=1,
+            normalize=True,
+            value_range=(-1, 1))
+        
+        progress(1.0, desc="视频生成完成！")
+        
+        return "example.mp4"
+        
+    except Exception as e:
+        print(f"生成视频时发生错误: {e}")
+        raise gr.Error(f"视频生成失败: {str(e)}")
 
 
 # Interface
@@ -164,24 +199,73 @@ def gradio_interface():
                     如需覆盖，请使用命令行参数 `--sample_shift` 和 `--sample_guide_scale`。
                     """)
 
-                run_t2v_button = gr.Button("Generate Video")
+                # 生成按钮和进度显示
+                with gr.Row():
+                    run_t2v_button = gr.Button("Generate Video", variant="primary", size="lg")
+                    cancel_button = gr.Button("Cancel", variant="stop", size="lg", visible=False)
+                
+                # 进度条和状态显示
+                progress_bar = gr.Progress()
+                status_text = gr.Textbox(
+                    label="生成状态",
+                    value="准备就绪",
+                    interactive=False,
+                    lines=2
+                )
 
             with gr.Column():
                 result_gallery = gr.Video(
                     label='Generated Video', interactive=False, height=600)
 
+        # 按钮状态控制函数
+        def on_generate_start():
+            return (
+                gr.Button(interactive=False),  # 生成按钮不可点击
+                gr.Button(visible=True),       # 取消按钮可见
+                gr.Textbox(value="正在生成视频...", interactive=False)
+            )
+        
+        def on_generate_complete():
+            return (
+                gr.Button(interactive=True),   # 生成按钮可点击
+                gr.Button(visible=False),      # 取消按钮隐藏
+                gr.Textbox(value="准备就绪", interactive=False)
+            )
+        
+        def on_cancel():
+            return (
+                gr.Button(interactive=True),   # 生成按钮可点击
+                gr.Button(visible=False),      # 取消按钮隐藏
+                gr.Textbox(value="已取消", interactive=False)
+            )
+        
+        # 提示词增强按钮
         run_p_button.click(
             fn=prompt_enc,
             inputs=[txt2vid_prompt, tar_lang],
             outputs=[txt2vid_prompt])
 
+        # 视频生成按钮
         run_t2v_button.click(
+            fn=on_generate_start,
+            outputs=[run_t2v_button, cancel_button, status_text]
+        ).then(
             fn=t2v_generation,
             inputs=[
                 txt2vid_prompt, resolution, sd_steps, guide_scale, shift_scale,
                 seed, n_prompt, offload_model_ui
             ],
             outputs=[result_gallery],
+            show_progress=True  # 启用进度条显示
+        ).then(
+            fn=on_generate_complete,
+            outputs=[run_t2v_button, cancel_button, status_text]
+        )
+        
+        # 取消按钮
+        cancel_button.click(
+            fn=on_cancel,
+            outputs=[run_t2v_button, cancel_button, status_text]
         )
 
     return demo
