@@ -1,0 +1,610 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>文生视频 - AI视频生成</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Microsoft YaHei', 'PingFang SC', 'Helvetica Neue', Arial, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            color: #333;
+        }
+
+        .container {
+            display: flex;
+            min-height: 100vh;
+            max-width: 1400px;
+            margin: 0 auto;
+            background: white;
+            box-shadow: 0 0 30px rgba(0, 0, 0, 0.1);
+        }
+
+        /* 左侧面板 */
+        .left-panel {
+            width: 400px;
+            background: linear-gradient(180deg, #f8f9ff 0%, #e8f2ff 100%);
+            padding: 30px;
+            border-right: 2px solid #e1e8ff;
+            overflow-y: auto;
+        }
+
+        .logo {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+
+        .logo h1 {
+            color: #4a90e2;
+            font-size: 24px;
+            font-weight: 600;
+            margin-bottom: 5px;
+        }
+
+        .logo p {
+            color: #7a9bb8;
+            font-size: 14px;
+        }
+
+        /* 提示词输入框 */
+        .prompt-section {
+            margin-bottom: 30px;
+        }
+
+        .prompt-section h3 {
+            color: #4a90e2;
+            margin-bottom: 15px;
+            font-size: 18px;
+            font-weight: 600;
+        }
+
+        .prompt-input {
+            width: 100%;
+            min-height: 120px;
+            padding: 15px;
+            border: 2px solid #e1e8ff;
+            border-radius: 12px;
+            font-size: 14px;
+            line-height: 1.6;
+            resize: vertical;
+            background: white;
+            transition: all 0.3s ease;
+        }
+
+        .prompt-input:focus {
+            outline: none;
+            border-color: #4a90e2;
+            box-shadow: 0 0 0 3px rgba(74, 144, 226, 0.1);
+        }
+
+        .prompt-input::placeholder {
+            color: #b8c5d6;
+        }
+
+        /* 样例展示 */
+        .examples-section {
+            margin-bottom: 30px;
+        }
+
+        .examples-section h3 {
+            color: #4a90e2;
+            margin-bottom: 15px;
+            font-size: 18px;
+            font-weight: 600;
+        }
+
+        .examples-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+        }
+
+        .example-item {
+            background: white;
+            border-radius: 12px;
+            padding: 15px;
+            text-align: center;
+            border: 2px solid #e1e8ff;
+            transition: all 0.3s ease;
+            cursor: pointer;
+        }
+
+        .example-item:hover {
+            border-color: #4a90e2;
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(74, 144, 226, 0.2);
+        }
+
+        .example-item img {
+            width: 100%;
+            height: 80px;
+            object-fit: cover;
+            border-radius: 8px;
+            margin-bottom: 10px;
+        }
+
+        .example-item h4 {
+            color: #4a90e2;
+            font-size: 14px;
+            font-weight: 600;
+            margin-bottom: 5px;
+        }
+
+        .example-item p {
+            color: #7a9bb8;
+            font-size: 12px;
+            line-height: 1.4;
+        }
+
+        /* 模型和风格选择 */
+        .settings-section {
+            margin-bottom: 30px;
+        }
+
+        .settings-section h3 {
+            color: #4a90e2;
+            margin-bottom: 15px;
+            font-size: 18px;
+            font-weight: 600;
+        }
+
+        .setting-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+        }
+
+        .setting-label {
+            color: #5a6b7c;
+            font-size: 14px;
+            font-weight: 500;
+        }
+
+        .setting-select {
+            padding: 8px 12px;
+            border: 2px solid #e1e8ff;
+            border-radius: 8px;
+            background: white;
+            color: #4a90e2;
+            font-size: 14px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .setting-select:focus {
+            outline: none;
+            border-color: #4a90e2;
+        }
+
+        /* 创作按钮 */
+        .create-section {
+            text-align: center;
+        }
+
+        .create-btn {
+            background: linear-gradient(135deg, #4a90e2 0%, #357abd 100%);
+            color: white;
+            border: none;
+            padding: 18px 40px;
+            border-radius: 25px;
+            font-size: 18px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: 0 5px 15px rgba(74, 144, 226, 0.3);
+            width: 100%;
+        }
+
+        .create-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(74, 144, 226, 0.4);
+        }
+
+        .create-btn:active {
+            transform: translateY(0);
+        }
+
+        .create-btn:disabled {
+            background: #b8c5d6;
+            cursor: not-allowed;
+            transform: none;
+            box-shadow: none;
+        }
+
+        /* 右侧面板 */
+        .right-panel {
+            flex: 1;
+            background: white;
+            padding: 30px;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .right-header {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+
+        .right-header h2 {
+            color: #4a90e2;
+            font-size: 28px;
+            font-weight: 600;
+            margin-bottom: 10px;
+        }
+
+        .right-header p {
+            color: #7a9bb8;
+            font-size: 16px;
+        }
+
+        /* 视频生成区域 */
+        .video-section {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            background: linear-gradient(135deg, #f8f9ff 0%, #e8f2ff 100%);
+            border-radius: 20px;
+            padding: 40px;
+            border: 2px dashed #e1e8ff;
+            min-height: 400px;
+        }
+
+        .video-placeholder {
+            text-align: center;
+            color: #7a9bb8;
+        }
+
+        .video-placeholder i {
+            font-size: 80px;
+            color: #b8c5d6;
+            margin-bottom: 20px;
+            display: block;
+        }
+
+        .video-placeholder h3 {
+            color: #4a90e2;
+            font-size: 24px;
+            margin-bottom: 15px;
+            font-weight: 600;
+        }
+
+        .video-placeholder p {
+            font-size: 16px;
+            line-height: 1.6;
+            margin-bottom: 20px;
+        }
+
+        /* 进度条 */
+        .progress-container {
+            width: 100%;
+            max-width: 400px;
+            margin: 0 auto;
+        }
+
+        .progress-bar {
+            width: 100%;
+            height: 8px;
+            background: #e1e8ff;
+            border-radius: 4px;
+            overflow: hidden;
+            margin-bottom: 15px;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #4a90e2, #357abd);
+            border-radius: 4px;
+            transition: width 0.3s ease;
+            width: 0%;
+        }
+
+        .progress-text {
+            text-align: center;
+            color: #4a90e2;
+            font-size: 14px;
+            font-weight: 500;
+        }
+
+        /* 生成中的状态 */
+        .generating {
+            display: none;
+        }
+
+        .generating.show {
+            display: block;
+        }
+
+        .generating .video-placeholder h3 {
+            color: #4a90e2;
+        }
+
+        .generating .video-placeholder i {
+            color: #4a90e2;
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0% { opacity: 1; }
+            50% { opacity: 0.5; }
+            100% { opacity: 1; }
+        }
+
+        /* 响应式设计 */
+        @media (max-width: 768px) {
+            .container {
+                flex-direction: column;
+            }
+            
+            .left-panel {
+                width: 100%;
+                border-right: none;
+                border-bottom: 2px solid #e1e8ff;
+            }
+            
+            .examples-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        /* 图标字体 */
+        .icon {
+            display: inline-block;
+            width: 1em;
+            height: 1em;
+            vertical-align: middle;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- 左侧面板 -->
+        <div class="left-panel">
+            <div class="logo">
+                <h1>🎬 文生视频</h1>
+                <p>AI智能视频生成平台</p>
+            </div>
+
+            <!-- 提示词输入 -->
+            <div class="prompt-section">
+                <h3>📝 输入提示词</h3>
+                <textarea 
+                    class="prompt-input" 
+                    id="promptInput"
+                    placeholder="请描述您想要生成的视频内容，例如：一只可爱的小猫在花园里玩耍，阳光明媚，画面温馨..."
+                ></textarea>
+            </div>
+
+            <!-- 样例展示 -->
+            <div class="examples-section">
+                <h3>💡 参考样例</h3>
+                <div class="examples-grid">
+                    <div class="example-item" onclick="loadExample(0)">
+                        <img src="data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTAwIiBoZWlnaHQ9IjgwIiB2aWV3Qm94PSIwIDAgMTAwIDgwIiBmaWxsPSJub25lIiB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciPgo8cmVjdCB3aWR0aD0iMTAwIiBoZWlnaHQ9IjgwIiBmaWxsPSIjRjBGNUZGIi8+CjxjaXJjbGUgY3g9IjMwIiBjeT0iMjAiIHI9IjgiIGZpbGw9IiM0QTEwRTIiLz4KPHBhdGggZD0iTTI1IDQwTDM1IDUwTDU1IDMwIiBzdHJva2U9IiM0QTEwRTIiIHN0cm9rZS13aWR0aD0iMyIgZmlsbD0ibm9uZSIvPgo8L3N2Zz4K" alt="自然风景">
+                        <h4>自然风景</h4>
+                        <p>美丽的大自然</p>
+                    </div>
+                    <div class="example-item" onclick="loadExample(1)">
+                        <img src="data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTAwIiBoZWlnaHQ9IjgwIiB2aWV3Qm94PSIwIDAgMTAwIDgwIiBmaWxsPSJub25lIiB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciPgo8cmVjdCB3aWR0aD0iMTAwIiBoZWlnaHQ9IjgwIiBmaWxsPSIjRjBGNUZGIi8+CjxjaXJjbGUgY3g9IjUwIiBjeT0iMjAiIHI9IjEwIiBmaWxsPSIjRkZDNzAwIi8+CjxwYXRoIGQ9Ik00MCAzNUw1MCA0NUw2MCAzNSIgc3Ryb2tlPSIjRkZDNzAwIiBzdHJva2Utd2lkdGg9IjMiIGZpbGw9Im5vbmUiLz4KPC9zdmc+Cg==" alt="城市夜景">
+                        <h4>城市夜景</h4>
+                        <p>繁华都市夜色</p>
+                    </div>
+                    <div class="example-item" onclick="loadExample(2)">
+                        <img src="data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTAwIiBoZWlnaHQ9IjgwIiB2aWV3Qm94PSIwIDAgMTAwIDgwIiBmaWxsPSJub25lIiB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciPgo8cmVjdCB3aWR0aD0iMTAwIiBoZWlnaHQ9IjgwIiBmaWxsPSIjRjBGNUZGIi8+CjxjaXJjbGUgY3g9IjIwIiBjeT0iMjAiIHI9IjYiIGZpbGw9IiM0QUM5M0QiLz4KPGNpcmNsZSBjeD0iODAiIGN5PSI2MCIgcj0iOCIgZmlsbD0iIzQ5QjQ0RCIvPgo8cGF0aCBkPSJNMzAgMzVMNDAgNDVMNjAgMjUiIHN0cm9rZT0iIzQ5QjQ0RCIgc3Ryb2tlLXdpZHRoPSIzIiBmaWxsPSJub25lIi8+Cjwvc3ZnPgo=" alt="动物世界">
+                        <h4>动物世界</h4>
+                        <p>可爱的小动物</p>
+                    </div>
+                    <div class="example-item" onclick="loadExample(3)">
+                        <img src="data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTAwIiBoZWlnaHQ9IjgwIiB2aWV3Qm94PSIwIDAgMTAwIDgwIiBmaWxsPSJub25lIiB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciPgo8cmVjdCB3aWR0aD0iMTAwIiBoZWlnaHQ9IjgwIiBmaWxsPSIjRjBGNUZGIi8+CjxwYXRoIGQ9Ik0yMCAyMEw0MCA0MEw2MCAyMEw4MCA0MCIgc3Ryb2tlPSIjRkY2QjM1IiBzdHJva2Utd2lkdGg9IjMiIGZpbGw9Im5vbmUiLz4KPGNpcmNsZSBjeD0iNTAiIGN5PSI0MCIgcj0iNiIgZmlsbD0iI0ZGNkIzNSIvPgo8L3N2Zz4K" alt="科技未来">
+                        <h4>科技未来</h4>
+                        <p>未来科技感</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 模型和风格设置 -->
+            <div class="settings-section">
+                <h3>⚙️ 生成设置</h3>
+                <div class="setting-row">
+                    <span class="setting-label">模型选择</span>
+                    <select class="setting-select" id="modelSelect">
+                        <option value="vidu-q1">Vidu Q1</option>
+                        <option value="vidu-q2">Vidu Q2</option>
+                        <option value="vidu-q3">Vidu Q3</option>
+                    </select>
+                </div>
+                <div class="setting-row">
+                    <span class="setting-label">风格选择</span>
+                    <select class="setting-select" id="styleSelect">
+                        <option value="realistic">写实风格</option>
+                        <option value="artistic">艺术风格</option>
+                        <option value="cartoon">卡通风格</option>
+                        <option value="cinematic">电影风格</option>
+                    </select>
+                </div>
+                <div class="setting-row">
+                    <span class="setting-label">视频时长</span>
+                    <select class="setting-select" id="durationSelect">
+                        <option value="5">5秒</option>
+                        <option value="10">10秒</option>
+                        <option value="15">15秒</option>
+                        <option value="30">30秒</option>
+                    </select>
+                </div>
+                <div class="setting-row">
+                    <span class="setting-label">清晰度</span>
+                    <select class="setting-select" id="qualitySelect">
+                        <option value="720p">720p</option>
+                        <option value="1080p">1080p</option>
+                        <option value="4k">4K</option>
+                    </select>
+                </div>
+            </div>
+
+            <!-- 创作按钮 -->
+            <div class="create-section">
+                <button class="create-btn" id="createBtn" onclick="startGeneration()">
+                    🎬 开始创作
+                </button>
+            </div>
+        </div>
+
+        <!-- 右侧面板 -->
+        <div class="right-panel">
+            <div class="right-header">
+                <h2>🎥 视频生成</h2>
+                <p>输入提示词，AI将为您生成独特的视频内容</p>
+            </div>
+
+            <!-- 视频生成区域 -->
+            <div class="video-section" id="videoSection">
+                <!-- 默认状态 -->
+                <div class="video-placeholder" id="defaultState">
+                    <i>🎬</i>
+                    <h3>准备生成视频</h3>
+                    <p>请在左侧输入提示词，选择模型和风格，然后点击"开始创作"按钮</p>
+                </div>
+
+                <!-- 生成中状态 -->
+                <div class="video-placeholder generating" id="generatingState">
+                    <i>⚡</i>
+                    <h3>正在生成视频...</h3>
+                    <p>AI正在根据您的提示词创作视频，请稍候</p>
+                    
+                    <div class="progress-container">
+                        <div class="progress-bar">
+                            <div class="progress-fill" id="progressFill"></div>
+                        </div>
+                        <div class="progress-text" id="progressText">0%</div>
+                    </div>
+                </div>
+
+                <!-- 生成完成状态 -->
+                <div class="video-placeholder generating" id="completedState" style="display: none;">
+                    <i>✅</i>
+                    <h3>视频生成完成！</h3>
+                    <p>您的AI视频已经生成完毕，可以下载或分享</p>
+                    
+                    <div style="margin-top: 20px;">
+                        <button class="create-btn" style="width: auto; margin: 0 10px;" onclick="downloadVideo()">
+                            📥 下载视频
+                        </button>
+                        <button class="create-btn" style="width: auto; margin: 0 10px; background: linear-gradient(135deg, #28a745 0%, #20c997 100%);" onclick="shareVideo()">
+                            🔗 分享视频
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // 样例提示词
+        const examples = [
+            "一只可爱的小猫在花园里玩耍，阳光明媚，画面温馨，背景是美丽的花朵和绿树",
+            "繁华的城市夜景，霓虹灯闪烁，车流如织，高楼大厦灯火通明，天空中有星星点缀",
+            "一只小兔子在森林里跳跃，周围是高大的树木和绿色的草地，阳光透过树叶洒下斑驳的光影",
+            "未来科技城市，飞行汽车在空中穿梭，全息投影随处可见，建筑具有强烈的科技感和未来感"
+        ];
+
+        // 加载样例
+        function loadExample(index) {
+            document.getElementById('promptInput').value = examples[index];
+        }
+
+        // 开始生成
+        function startGeneration() {
+            const prompt = document.getElementById('promptInput').value.trim();
+            if (!prompt) {
+                alert('请输入提示词！');
+                return;
+            }
+
+            // 显示生成中状态
+            document.getElementById('defaultState').style.display = 'none';
+            document.getElementById('generatingState').classList.add('show');
+            document.getElementById('completedState').style.display = 'none';
+            
+            // 禁用创作按钮
+            document.getElementById('createBtn').disabled = true;
+            document.getElementById('createBtn').textContent = '生成中...';
+
+            // 模拟进度更新
+            simulateProgress();
+        }
+
+        // 模拟进度更新
+        function simulateProgress() {
+            let progress = 0;
+            const progressFill = document.getElementById('progressFill');
+            const progressText = document.getElementById('progressText');
+            
+            const interval = setInterval(() => {
+                progress += Math.random() * 15;
+                if (progress >= 100) {
+                    progress = 100;
+                    clearInterval(interval);
+                    
+                    // 显示完成状态
+                    setTimeout(() => {
+                        document.getElementById('generatingState').classList.remove('show');
+                        document.getElementById('completedState').style.display = 'block';
+                        
+                        // 恢复创作按钮
+                        document.getElementById('createBtn').disabled = false;
+                        document.getElementById('createBtn').textContent = '🎬 开始创作';
+                    }, 500);
+                }
+                
+                progressFill.style.width = progress + '%';
+                progressText.textContent = Math.round(progress) + '%';
+            }, 200);
+        }
+
+        // 下载视频
+        function downloadVideo() {
+            alert('视频下载功能需要后端支持');
+        }
+
+        // 分享视频
+        function shareVideo() {
+            alert('视频分享功能需要后端支持');
+        }
+
+        // 页面加载完成后的初始化
+        document.addEventListener('DOMContentLoaded', function() {
+            // 为提示词输入框添加字数统计
+            const promptInput = document.getElementById('promptInput');
+            promptInput.addEventListener('input', function() {
+                const length = this.value.length;
+                if (length > 500) {
+                    this.style.borderColor = '#ff6b6b';
+                } else {
+                    this.style.borderColor = '#e1e8ff';
+                }
+            });
+
+            // 为样例添加点击效果
+            const exampleItems = document.querySelectorAll('.example-item');
+            exampleItems.forEach(item => {
+                item.addEventListener('click', function() {
+                    // 移除其他项的选中状态
+                    exampleItems.forEach(i => i.style.borderColor = '#e1e8ff');
+                    // 设置当前项的选中状态
+                    this.style.borderColor = '#4a90e2';
+                    this.style.background = '#f0f5ff';
+                });
+            });
+        });
+    </script>
+</body>
+</html>

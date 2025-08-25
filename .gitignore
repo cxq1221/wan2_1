@@ -18,7 +18,6 @@
 # *.txt
 *.backup
 *.pkl
-*.html
 *.pdf
 *.whl
 cache
