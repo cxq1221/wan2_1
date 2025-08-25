@@ -121,16 +121,16 @@ def gradio_interface():
         with gr.Row():
             with gr.Column():
                 txt2vid_prompt = gr.Textbox(
-                    label="Prompt",
+                    label="提示词(Prompt)",
                     placeholder="Describe the video you want to generate",
                 )
-                tar_lang = gr.Radio(
-                    choices=["ZH", "EN"],
-                    label="Target language of prompt enhance",
-                    value="ZH")
-                run_p_button = gr.Button(value="Prompt Enhance")
+                # tar_lang = gr.Radio(
+                #     choices=["ZH", "EN"],
+                #     label="Target language of prompt enhance",
+                #     value="ZH")
+                # run_p_button = gr.Button(value="Prompt Enhance")
 
-                with gr.Accordion("生成参数设置", open=True):
+                with gr.Accordion("自定义参数", open=False):
                     # 基础参数
                     gr.Markdown("### 基础参数")
                     resolution = gr.Dropdown(
@@ -184,9 +184,6 @@ def gradio_interface():
                     
                     # 高级优化参数
                     gr.Markdown("### 高级优化参数")
-                    gr.Markdown("""
-                    **注意**: 这些参数会覆盖上方的设置，优先级更高
-                    """)
                     
                     with gr.Row():
                         offload_model_ui = gr.Checkbox(
@@ -207,10 +204,10 @@ def gradio_interface():
                 # 进度条和状态显示
                 progress_bar = gr.Progress()
                 status_text = gr.Textbox(
-                    label="生成状态",
-                    value="准备就绪",
+                    label="运行状态",
+                    value="无任务",
                     interactive=False,
-                    lines=2
+                    lines=1
                 )
 
             with gr.Column():
@@ -229,7 +226,7 @@ def gradio_interface():
             return (
                 gr.Button(interactive=True),   # 生成按钮可点击
                 gr.Button(visible=False),      # 取消按钮隐藏
-                gr.Textbox(value="准备就绪", interactive=False)
+                gr.Textbox(value="无任务", interactive=False)
             )
         
         def on_cancel():
@@ -240,10 +237,10 @@ def gradio_interface():
             )
         
         # 提示词增强按钮
-        run_p_button.click(
-            fn=prompt_enc,
-            inputs=[txt2vid_prompt, tar_lang],
-            outputs=[txt2vid_prompt])
+        # run_p_button.click(
+        #     fn=prompt_enc,
+        #     inputs=[txt2vid_prompt],
+        #     outputs=[txt2vid_prompt])
 
         # 视频生成按钮
         run_t2v_button.click(
@@ -353,16 +350,16 @@ if __name__ == '__main__':
     # T5 CPU设置：使用命令行参数，默认为True（开启）
     t5_cpu_setting = args.t5_cpu
     
-    wan_t2v = wan.WanT2V(
-        config=cfg,
-        checkpoint_dir=args.ckpt_dir,
-        device_id=0,
-        rank=0,
-        t5_fsdp=False,
-        dit_fsdp=False,
-        use_usp=False,
-        t5_cpu=t5_cpu_setting,  # 默认开启T5 CPU运行以节省显存
-    )
+    # wan_t2v = wan.WanT2V(
+    #     config=cfg,
+    #     checkpoint_dir=args.ckpt_dir,
+    #     device_id=0,
+    #     rank=0,
+    #     t5_fsdp=False,
+    #     dit_fsdp=False,
+    #     use_usp=False,
+    #     t5_cpu=t5_cpu_setting,  # 默认开启T5 CPU运行以节省显存
+    # )
     print("done", flush=True)
 
     demo = gradio_interface()
