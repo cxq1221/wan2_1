@@ -1,0 +1,201 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Header设计预览</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Microsoft YaHei', 'PingFang SC', 'Helvetica Neue', Arial, sans-serif;
+            background: #f5f7fa;
+            padding: 20px;
+        }
+
+        .preview-container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 0 30px rgba(0, 0, 0, 0.1);
+            overflow: hidden;
+        }
+
+        .header-section {
+            background: linear-gradient(135deg, #f8f9ff 0%, #e8f2ff 100%);
+            border-bottom: 2px solid #e1e8ff;
+            padding: 40px 30px;
+            text-align: center;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .header-section::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: linear-gradient(45deg, rgba(74, 144, 226, 0.05) 0%, rgba(53, 122, 189, 0.03) 100%);
+            pointer-events: none;
+        }
+
+        .header-title {
+            font-size: 36px;
+            font-weight: 700;
+            margin-bottom: 12px;
+            color: #2c3e50;
+            position: relative;
+            z-index: 1;
+            letter-spacing: -0.5px;
+            text-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+
+        .header-subtitle {
+            font-size: 18px;
+            color: #5a6b7c;
+            font-weight: 400;
+            position: relative;
+            z-index: 1;
+            letter-spacing: 0.2px;
+            opacity: 0.85;
+        }
+
+        .content-preview {
+            padding: 40px;
+            text-align: center;
+        }
+
+        .design-notes {
+            background: linear-gradient(135deg, #f8f9ff 0%, #e8f2ff 100%);
+            border: 2px solid #e1e8ff;
+            border-radius: 15px;
+            padding: 30px;
+            margin: 20px 0;
+            text-align: left;
+        }
+
+        .design-notes h3 {
+            color: #4a90e2;
+            margin-bottom: 15px;
+            font-size: 20px;
+        }
+
+        .design-notes ul {
+            color: #5a6b7c;
+            line-height: 1.8;
+            padding-left: 20px;
+        }
+
+        .design-notes li {
+            margin-bottom: 8px;
+        }
+
+        .color-palette {
+            display: flex;
+            gap: 20px;
+            justify-content: center;
+            margin: 30px 0;
+            flex-wrap: wrap;
+        }
+
+        .color-item {
+            text-align: center;
+        }
+
+        .color-swatch {
+            width: 60px;
+            height: 60px;
+            border-radius: 10px;
+            margin-bottom: 10px;
+            border: 2px solid #e1e8ff;
+        }
+
+        .color-code {
+            font-family: monospace;
+            font-size: 12px;
+            color: #5a6b7c;
+        }
+    </style>
+</head>
+<body>
+    <div class="preview-container">
+        <!-- 新的Header设计 -->
+        <div class="header-section">
+            <div class="header-title">🎬 文生视频</div>
+            <div class="header-subtitle">AI智能视频生成平台</div>
+        </div>
+
+        <!-- 设计说明 -->
+        <div class="content-preview">
+            <h2 style="color: #4a90e2; margin-bottom: 30px;">🎨 Header设计说明</h2>
+            
+            <div class="design-notes">
+                <h3>✨ 设计理念</h3>
+                <ul>
+                    <li><strong>浅色背景</strong>：采用柔和的蓝白渐变，营造清新、专业的视觉感受</li>
+                    <li><strong>优雅文案</strong>：主标题"文生视频"，副标题"AI智能视频生成平台"</li>
+                    <li><strong>现代风格</strong>：使用微妙的阴影和渐变效果，提升视觉层次</li>
+                    <li><strong>品牌一致性</strong>：与整体UI的蓝白配色方案保持一致</li>
+                </ul>
+            </div>
+
+            <div class="design-notes">
+                <h3>🎯 设计细节</h3>
+                <ul>
+                    <li><strong>背景渐变</strong>：从 #f8f9ff 到 #e8f2ff 的柔和过渡</li>
+                    <li><strong>微妙的装饰层</strong>：半透明的蓝色渐变叠加，增加深度</li>
+                    <li><strong>字体优化</strong>：主标题36px粗体，副标题18px常规</li>
+                    <li><strong>间距调整</strong>：增加内边距到40px，提供更舒适的视觉空间</li>
+                    <li><strong>边框设计</strong>：底部添加淡蓝色边框，与内容区域自然分离</li>
+                </ul>
+            </div>
+
+            <div class="color-palette">
+                <div class="color-item">
+                    <div class="color-swatch" style="background: #f8f9ff;"></div>
+                    <div class="color-code">#f8f9ff</div>
+                    <div>背景起始色</div>
+                </div>
+                <div class="color-item">
+                    <div class="color-swatch" style="background: #e8f2ff;"></div>
+                    <div class="color-code">#e8f2ff</div>
+                    <div>背景结束色</div>
+                </div>
+                <div class="color-item">
+                    <div class="color-swatch" style="background: #2c3e50;"></div>
+                    <div class="color-code">#2c3e50</div>
+                    <div>主标题色</div>
+                </div>
+                <div class="color-item">
+                    <div class="color-swatch" style="background: #5a6b7c;"></div>
+                    <div class="color-code">#5a6b7c</div>
+                    <div>副标题色</div>
+                </div>
+                <div class="color-item">
+                    <div class="color-swatch" style="background: #e1e8ff;"></div>
+                    <div class="color-code">#e1e8ff</div>
+                    <div>边框色</div>
+                </div>
+            </div>
+
+            <div class="design-notes">
+                <h3>🚀 技术特点</h3>
+                <ul>
+                    <li><strong>CSS渐变</strong>：使用linear-gradient创建平滑的背景过渡</li>
+                    <li><strong>伪元素装饰</strong>：通过::before伪元素添加微妙的装饰层</li>
+                    <li><strong>字体优化</strong>：letter-spacing调整字间距，提升可读性</li>
+                    <li><strong>阴影效果</strong>：text-shadow为主标题添加微妙的立体感</li>
+                    <li><strong>响应式设计</strong>：在不同屏幕尺寸下保持美观</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+</body>
+</html>
