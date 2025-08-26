@@ -20,7 +20,7 @@ from wan.utils.utils import cache_video
 # Global Var
 # prompt_expander = None
 wan_t2v = None
-args = None  # 全局变量，用于存储命令行参数
+config = None  # 全局变量，用于存储配置
 
 
 # Button Func
@@ -31,23 +31,23 @@ def prompt_enc(prompt, tar_lang):
 
 def t2v_generation(txt2vid_prompt, resolution, sd_steps, guide_scale,
                    shift_scale, seed, n_prompt, offload_model_ui, progress=gr.Progress()):
-    global wan_t2v, args  # 添加args全局变量访问
+    global wan_t2v, config  # 添加config全局变量访问
     # print(f"{txt2vid_prompt},{resolution},{sd_steps},{guide_scale},{shift_scale},{seed},{n_prompt}")
 
     try:
         W = int(resolution.split("*")[0])
         H = int(resolution.split("*")[1])
         
-        # 优先级：命令行参数 > 界面基础参数
-        actual_shift = float(args.sample_shift) if hasattr(args, 'sample_shift') else float(shift_scale)
-        actual_guide_scale = float(args.sample_guide_scale) if hasattr(args, 'sample_guide_scale') else float(guide_scale)
-        actual_offload = bool(args.offload_model) if hasattr(args, 'offload_model') else bool(offload_model_ui)
+        # 优先级：配置参数 > 界面基础参数
+        actual_shift = float(config.get('sample_shift', shift_scale))
+        actual_guide_scale = float(config.get('sample_guide_scale', guide_scale))
+        actual_offload = bool(config.get('offload_model', offload_model_ui))
         
-        # T5 CPU设置：使用命令行参数，默认为True（开启）
-        actual_t5_cpu = args.t5_cpu
+        # T5 CPU设置：使用配置参数，默认为True（开启）
+        actual_t5_cpu = config.get('t5_cpu', True)
         
         print(f"生成参数: 分辨率={W}x{H}, 偏移={actual_shift}, 引导比例={actual_guide_scale}, 卸载={actual_offload}, T5_CPU={actual_t5_cpu}")
-        print(f"命令行参数: sample_shift={getattr(args, 'sample_shift', 'N/A')}, sample_guide_scale={getattr(args, 'sample_guide_scale', 'N/A')}, offload_model={getattr(args, 'offload_model', 'N/A')}, t5_cpu={getattr(args, 't5_cpu', 'N/A')}")
+        print(f"配置参数: sample_shift={config.get('sample_shift', 'N/A')}, sample_guide_scale={config.get('sample_guide_scale', 'N/A')}, offload_model={config.get('offload_model', 'N/A')}, t5_cpu={config.get('t5_cpu', 'N/A')}")
         print(f"界面基础参数: guide_scale={guide_scale}, shift_scale={shift_scale}")
         print(f"界面高级参数: offload_model={offload_model_ui}")
         
@@ -111,10 +111,77 @@ def gradio_interface():
     # 自定义CSS样式
     custom_css = """
     <style>
+    /* Gradio样式修复 - 解决 .gap.svelte-vt1mxs 等内部样式问题 */
+    .gap.svelte-vt1mxs,
+    .gap.svelte-*,
+    .gap {
+        gap: 0 !important;
+    }
+    
+    .gr-form,
+    .gr-form > * {
+        gap: 0 !important;
+    }
+    
+    .gr-form-row,
+    .gr-form-column,
+    .gr-form-group {
+        gap: 0 !important;
+        margin: 0 !important;
+        padding: 0 !important;
+    }
+    
+    .gr-box,
+    .gr-block,
+    .gr-block-label {
+        margin: 0 !important;
+        padding: 0 !important;
+    }
+    
+    .accordion {
+        gap: 0 !important;
+    }
+    
+    .accordion > * {
+        margin: 0 !important;
+        padding: 0 !important;
+    }
+    
+    *[class*="gap"] {
+        gap: 0 !important;
+    }
+    
+    [class*="svelte-"] {
+        gap: 0 !important;
+    }
+    
+    /* 隐藏或调整Gradio的默认footer */
+    .footer,
+    .footer-container,
+    .gr-footer,
+    [class*="footer"] {
+        display: none !important;
+        margin: 0 !important;
+        padding: 0 !important;
+        height: 0 !important;
+    }
+    
+    /* 调整主容器的底部间距 */
     .main-container {
-        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
         min-height: 100vh;
         padding: 20px;
+        display: block !important;
+        padding-bottom: 0 !important;
+    }
+    
+    /* 隐藏JavaScript容器 */
+    .hidden-js-container,
+    .hidden-js-container * {
+        display: none !important;
+        height: 0 !important;
+        margin: 0 !important;
+        padding: 0 !important;
+        overflow: hidden !important;
     }
     .content-wrapper {
         background: white;
@@ -185,6 +252,35 @@ def gradio_interface():
         display: flex;
         align-items: center;
         gap: 8px;
+    }
+    
+    /* 覆盖Gradio内部的gap样式 */
+    .gap.svelte-vt1mxs,
+    .gap {
+        gap: 0 !important;
+    }
+    
+    /* 覆盖Gradio的Row和Column间距 */
+    .gr-form > .gr-form-row,
+    .gr-form > .gr-form-column,
+    .gr-form > .gr-form-group {
+        gap: 0 !important;
+        margin: 0 !important;
+        padding: 0 !important;
+    }
+    
+    /* 覆盖Gradio的默认间距 */
+    .gr-form {
+        gap: 0 !important;
+    }
+    
+    /* 确保我们的自定义间距生效 */
+    .examples-grid {
+        gap: 12px !important;
+    }
+    
+    .setting-row {
+        gap: 0 !important;
     }
     .examples-grid {
         display: grid;
@@ -476,7 +572,7 @@ def gradio_interface():
                         # 结果视频（隐藏，用于存储结果）
                         result_gallery = gr.Video(visible=False)
                 
-                # 添加JavaScript功能
+                # 添加JavaScript功能（隐藏容器）
                 gr.HTML("""
                 <script>
                 // 样例点击功能
@@ -519,7 +615,7 @@ def gradio_interface():
                     }
                 }
                 </script>
-                """)
+                """, elem_classes="hidden-js-container")
 
         # 按钮状态控制函数
         def on_generate_start():
@@ -572,68 +668,45 @@ def gradio_interface():
     return demo
 
 
-# Main
-def _parse_args():
-    parser = argparse.ArgumentParser(
-        description="Generate a video from a text prompt or image using Gradio")
-    parser.add_argument(
-        "--ckpt_dir",
-        type=str,
-        default="../Wan2.1-T2V-1.3B",
-        help="The path to the checkpoint directory.")
-    parser.add_argument(
-        "--prompt_extend_method",
-        type=str,
-        default="none",
-        choices=["none"],
-        help="The prompt extend method to use.")
-    parser.add_argument(
-        "--prompt_extend_model",
-        type=str,
-        default=None,
-        help="The prompt extend model to use.")
+# Configuration
+def load_config():
+    """加载配置，支持环境变量和配置文件"""
+    import os
     
-    # 模型卸载参数：将模型权重从GPU内存卸载到CPU内存，减少GPU显存占用
-    # 适用于显存不足的情况，但会降低推理速度
-    parser.add_argument(
-        "--offload_model",
-        action="store_true",
-        default=True,
-        help="Whether to offload model weights to CPU memory to save GPU VRAM (default: True)")
+    config = {
+        # 默认配置
+        'ckpt_dir': os.environ.get('WAN_CKPT_DIR', '../Wan2.1-T2V-1.3B'),
+        'prompt_extend_method': os.environ.get('WAN_PROMPT_EXTEND_METHOD', 'none'),
+        'prompt_extend_model': os.environ.get('WAN_PROMPT_EXTEND_MODEL', None),
+        'offload_model': os.environ.get('WAN_OFFLOAD_MODEL', 'true').lower() == 'true',
+        't5_cpu': os.environ.get('WAN_T5_CPU', 'true').lower() == 'true',
+        'sample_shift': float(os.environ.get('WAN_SAMPLE_SHIFT', '8.0')),
+        'sample_guide_scale': float(os.environ.get('WAN_SAMPLE_GUIDE_SCALE', '6.0')),
+    }
     
-    # T5模型CPU运行参数：将T5文本编码器放在CPU上运行
-    # 可以节省大量GPU显存，适合显存受限的环境
-    # 默认开启T5 CPU运行以节省显存
-    parser.add_argument(
-        "--t5_cpu",
-        type=lambda x: x.lower() == 'true',
-        default=True,
-        help="Place T5 text encoder on CPU to save GPU VRAM (default: True, use --t5_cpu false to disable)")
+    # 尝试从配置文件加载
+    config_file = os.environ.get('WAN_CONFIG_FILE', 'wan_config.json')
+    if os.path.exists(config_file):
+        try:
+            import json
+            with open(config_file, 'r', encoding='utf-8') as f:
+                file_config = json.load(f)
+                config.update(file_config)
+                print(f"✅ 从配置文件 {config_file} 加载配置")
+        except Exception as e:
+            print(f"⚠️ 配置文件加载失败: {e}")
     
-    # 采样偏移参数：控制视频生成过程中的时间偏移强度
-    # 值越大，相邻帧之间的变化越剧烈，视频动态效果越明显
-    parser.add_argument(
-        "--sample_shift",
-        type=float,
-        default=8.0,
-        help="Sampling shift scale for temporal consistency control (default: 8.0)")
+    print("📋 当前配置:")
+    for key, value in config.items():
+        print(f"  {key}: {value}")
     
-    # 采样引导比例参数：控制生成视频对文本提示词的遵循程度
-    # 值越大，生成内容越严格遵循提示词，但可能降低视频质量
-    parser.add_argument(
-        "--sample_guide_scale",
-        type=float,
-        default=6.0,
-        help="Classifier-free guidance scale for text adherence (default: 6.0)")
-
-    args = parser.parse_args()
-
-    return args
+    return config
 
 
 if __name__ == '__main__':
-    args = _parse_args()
-    globals()['args'] = args  # 将args设为全局变量，供其他函数使用
+    # 加载配置
+    config = load_config()
+    globals()['config'] = config  # 将config设为全局变量，供其他函数使用
 
     print("Step1: Prompt extend disabled...", end='', flush=True)
     # 关闭prompt_extend功能
@@ -643,20 +716,20 @@ if __name__ == '__main__':
     cfg = WAN_CONFIGS['t2v-1.3B']
 
     
-    # 调试：显示所有参数
+    # 调试：显示所有配置
     print("\n=== 调试信息 ===")
-    print(f"args.offload_model: {args.offload_model} (类型: {type(args.offload_model)})")
-    print(f"args.t5_cpu: {args.t5_cpu} (类型: {type(args.t5_cpu)})")
-    print(f"args.sample_shift: {args.sample_shift} (类型: {type(args.sample_shift)})")
-    print(f"args.sample_guide_scale: {args.sample_guide_scale} (类型: {type(args.sample_guide_scale)})")
+    print(f"config.offload_model: {config['offload_model']} (类型: {type(config['offload_model'])})")
+    print(f"config.t5_cpu: {config['t5_cpu']} (类型: {type(config['t5_cpu'])})")
+    print(f"config.sample_shift: {config['sample_shift']} (类型: {type(config['sample_shift'])})")
+    print(f"config.sample_guide_scale: {config['sample_guide_scale']} (类型: {type(config['sample_guide_scale'])})")
     print("================\n")
     
-    # T5 CPU设置：使用命令行参数，默认为True（开启）
-    t5_cpu_setting = args.t5_cpu
+    # T5 CPU设置：使用配置参数，默认为True（开启）
+    t5_cpu_setting = config['t5_cpu']
     
     # wan_t2v = wan.WanT2V(
     #     config=cfg,
-    #     checkpoint_dir=args.ckpt_dir,
+    #     checkpoint_dir=config['ckpt_dir'],
     #     device_id=0,
     #     rank=0,
     #     t5_fsdp=False,

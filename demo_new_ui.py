@@ -11,11 +11,50 @@ def create_demo_interface():
     # 自定义CSS样式
     custom_css = """
     <style>
-    .main-container {
-        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-        min-height: 100vh;
-        padding: 20px;
+    /* Gradio样式修复 - 解决 .gap.svelte-vt1mxs 等内部样式问题 */
+    .gap.svelte-vt1mxs,
+    .gap.svelte-*,
+    .gap {
+        gap: 0 !important;
     }
+    
+    .gr-form,
+    .gr-form > * {
+        gap: 0 !important;
+    }
+    
+    .gr-form-row,
+    .gr-form-column,
+    .gr-form-group {
+        gap: 0 !important;
+        margin: 0 !important;
+        padding: 0 !important;
+    }
+    
+    .gr-box,
+    .gr-block,
+    .gr-block-label {
+        margin: 0 !important;
+        padding: 0 !important;
+    }
+    
+    .accordion {
+        gap: 0 !important;
+    }
+    
+    .accordion > * {
+        margin: 0 !important;
+        padding: 0 !important;
+    }
+    
+    *[class*="gap"] {
+        gap: 0 !important;
+    }
+    
+    [class*="svelte-"] {
+        gap: 0 !important;
+    }
+
     .content-wrapper {
         background: white;
         border-radius: 20px;
@@ -23,7 +62,6 @@ def create_demo_interface():
         overflow: hidden;
     }
     .header-section {
-        background: linear-gradient(135deg, #f8f9ff 0%, #e8f2ff 100%);
         border-bottom: 2px solid #e1e8ff;
         padding: 40px 30px;
         text-align: center;
@@ -85,6 +123,35 @@ def create_demo_interface():
         display: flex;
         align-items: center;
         gap: 8px;
+    }
+    
+    /* 覆盖Gradio内部的gap样式 */
+    .gap.svelte-vt1mxs,
+    .gap {
+        gap: 0 !important;
+    }
+    
+    /* 覆盖Gradio的Row和Column间距 */
+    .gr-form > .gr-form-row,
+    .gr-form > .gr-form-column,
+    .gr-form > .gr-form-group {
+        gap: 0 !important;
+        margin: 0 !important;
+        padding: 0 !important;
+    }
+    
+    /* 覆盖Gradio的默认间距 */
+    .gr-form {
+        gap: 0 !important;
+    }
+    
+    /* 确保我们的自定义间距生效 */
+    .examples-grid {
+        gap: 12px !important;
+    }
+    
+    .setting-row {
+        gap: 0 !important;
     }
     .examples-grid {
         display: grid;

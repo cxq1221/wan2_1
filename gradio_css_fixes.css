@@ -1,0 +1,174 @@
+/* Gradio样式修复文件 */
+/* 解决 .gap.svelte-vt1mxs 等内部样式问题 */
+
+/* 1. 覆盖所有Gradio内部的gap样式 */
+.gap.svelte-vt1mxs,
+.gap.svelte-*,
+.gap {
+    gap: 0 !important;
+}
+
+/* 2. 覆盖Gradio的表单间距 */
+.gr-form,
+.gr-form > * {
+    gap: 0 !important;
+}
+
+/* 3. 覆盖Row和Column的默认间距 */
+.gr-form-row,
+.gr-form-column,
+.gr-form-group {
+    gap: 0 !important;
+    margin: 0 !important;
+    padding: 0 !important;
+}
+
+/* 4. 覆盖Gradio的默认组件间距 */
+.gr-box,
+.gr-block,
+.gr-block-label {
+    margin: 0 !important;
+    padding: 0 !important;
+}
+
+/* 5. 覆盖Accordion组件的间距 */
+.accordion {
+    gap: 0 !important;
+}
+
+.accordion > * {
+    margin: 0 !important;
+    padding: 0 !important;
+}
+
+/* 6. 覆盖Slider组件的间距 */
+.slider-container {
+    gap: 0 !important;
+    margin: 0 !important;
+}
+
+/* 7. 覆盖Dropdown组件的间距 */
+.dropdown-container {
+    gap: 0 !important;
+    margin: 0 !important;
+}
+
+/* 8. 覆盖Textbox组件的间距 */
+.textbox-container {
+    gap: 0 !important;
+    margin: 0 !important;
+}
+
+/* 9. 覆盖Checkbox组件的间距 */
+.checkbox-container {
+    gap: 0 !important;
+    margin: 0 !important;
+}
+
+/* 10. 覆盖Button组件的间距 */
+.button-container {
+    gap: 0 !important;
+    margin: 0 !important;
+}
+
+/* 11. 覆盖Progress组件的间距 */
+.progress-container {
+    gap: 0 !important;
+    margin: 0 !important;
+}
+
+/* 12. 覆盖Video组件的间距 */
+.video-container {
+    gap: 0 !important;
+    margin: 0 !important;
+}
+
+/* 13. 覆盖Markdown组件的间距 */
+.markdown-container {
+    gap: 0 !important;
+    margin: 0 !important;
+}
+
+/* 14. 覆盖HTML组件的间距 */
+.html-container {
+    gap: 0 !important;
+    margin: 0 !important;
+}
+
+/* 15. 确保我们的自定义间距生效 */
+.examples-grid {
+    gap: 12px !important;
+}
+
+.setting-row {
+    gap: 0 !important;
+}
+
+.section-title {
+    gap: 8px !important;
+}
+
+/* 16. 覆盖Gradio的响应式间距 */
+@media (max-width: 768px) {
+    .gr-form,
+    .gr-form > * {
+        gap: 0 !important;
+    }
+}
+
+/* 17. 覆盖Gradio的主题相关间距 */
+[data-theme="default"] .gr-form,
+[data-theme="default"] .gr-form > * {
+    gap: 0 !important;
+}
+
+/* 18. 覆盖Gradio的暗色主题间距 */
+[data-theme="dark"] .gr-form,
+[data-theme="dark"] .gr-form > * {
+    gap: 0 !important;
+}
+
+/* 19. 强制覆盖所有可能的gap样式 */
+*[class*="gap"] {
+    gap: 0 !important;
+}
+
+/* 20. 覆盖Gradio的动态生成的样式 */
+[class*="svelte-"] {
+    gap: 0 !important;
+}
+
+/* 21. 确保我们的布局不受影响 */
+.main-content {
+    gap: 0 !important;
+}
+
+.left-panel,
+.right-panel {
+    gap: 0 !important;
+}
+
+/* 22. 覆盖Gradio的默认组件包装器 */
+.component-wrapper {
+    gap: 0 !important;
+    margin: 0 !important;
+    padding: 0 !important;
+}
+
+/* 23. 覆盖Gradio的标签间距 */
+.label-container {
+    gap: 0 !important;
+    margin: 0 !important;
+}
+
+/* 24. 覆盖Gradio的输入框间距 */
+.input-container {
+    gap: 0 !important;
+    margin: 0 !important;
+}
+
+/* 25. 覆盖Gradio的输出间距 */
+.output-container {
+    gap: 0 !important;
+    margin: 0 !important;
+}
