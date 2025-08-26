@@ -20,7 +20,112 @@ from wan.utils.utils import cache_video
 # Global Var
 # prompt_expander = None
 wan_t2v = None
-config = None  # 全局变量，用于存储配置
+
+def get_wan_t2v():
+    """懒初始化 WanT2V 模型"""
+    global wan_t2v
+    if wan_t2v is None:
+        print("初始化 WanT2V 模型...")
+        cfg = WAN_CONFIGS['t2v-1.3B']
+        t5_cpu_setting = config['t5_cpu']
+        
+        wan_t2v = wan.WanT2V(
+            config=cfg,
+            checkpoint_dir=config['ckpt_dir'],
+            device_id=0,
+            rank=0,
+            t5_fsdp=False,
+            dit_fsdp=False,
+            use_usp=False,
+            t5_cpu=t5_cpu_setting,
+        )
+        print("WanT2V 模型初始化完成")
+    return wan_t2v
+
+class Config:
+    """配置管理类，支持懒加载和默认值"""
+    
+    def __init__(self):
+        self._config = None
+        self._defaults = {
+            'ckpt_dir': '../Wan2.1-T2V-1.3B',
+            'prompt_extend_method': 'none',
+            'prompt_extend_model': None,
+            'offload_model': True,
+            't5_cpu': True,
+            'sample_shift': 8.0,
+            'sample_guide_scale': 6.0,
+        }
+    
+    def _load_config(self):
+        """懒加载配置"""
+        if self._config is not None:
+            return self._config
+            
+        import os
+        
+        config = self._defaults.copy()
+        
+        # 从环境变量加载
+        env_mapping = {
+            'WAN_CKPT_DIR': 'ckpt_dir',
+            'WAN_PROMPT_EXTEND_METHOD': 'prompt_extend_method',
+            'WAN_PROMPT_EXTEND_MODEL': 'prompt_extend_model',
+            'WAN_OFFLOAD_MODEL': 'offload_model',
+            'WAN_T5_CPU': 't5_cpu',
+            'WAN_SAMPLE_SHIFT': 'sample_shift',
+            'WAN_SAMPLE_GUIDE_SCALE': 'sample_guide_scale',
+        }
+        
+        for env_var, config_key in env_mapping.items():
+            value = os.environ.get(env_var)
+            if value is not None:
+                if config_key in ['offload_model', 't5_cpu']:
+                    config[config_key] = value.lower() == 'true'
+                elif config_key in ['sample_shift', 'sample_guide_scale']:
+                    try:
+                        config[config_key] = float(value)
+                    except ValueError:
+                        print(f"⚠️ 环境变量 {env_var}={value} 无法转换为数值，使用默认值")
+                else:
+                    config[config_key] = value
+        
+        # 从配置文件加载
+        config_file = os.environ.get('WAN_CONFIG_FILE', 'wan_config.json')
+        if os.path.exists(config_file):
+            try:
+                import json
+                with open(config_file, 'r', encoding='utf-8') as f:
+                    file_config = json.load(f)
+                    config.update(file_config)
+                    print(f"✅ 从配置文件 {config_file} 加载配置")
+            except Exception as e:
+                print(f"⚠️ 配置文件加载失败: {e}")
+        
+        print("📋 当前配置:")
+        for key, value in config.items():
+            print(f"  {key}: {value}")
+        
+        self._config = config
+        return config
+    
+    def get(self, key, default=None):
+        """获取配置值，支持默认值"""
+        config = self._load_config()
+        return config.get(key, default)
+    
+    def __getitem__(self, key):
+        """支持字典式访问"""
+        config = self._load_config()
+        return config[key]
+    
+    def __contains__(self, key):
+        """支持 in 操作符"""
+        config = self._load_config()
+        return key in config
+
+# 全局配置实例
+config = Config()
 
 
 # Button Func
@@ -31,8 +136,9 @@ def prompt_enc(prompt, tar_lang):
 
 def t2v_generation(txt2vid_prompt, resolution, sd_steps, guide_scale,
                    shift_scale, seed, n_prompt, offload_model_ui, progress=gr.Progress()):
-    global wan_t2v, config  # 添加config全局变量访问
-    # print(f"{txt2vid_prompt},{resolution},{sd_steps},{guide_scale},{shift_scale},{seed},{n_prompt}")
+    # 使用懒初始化获取模型
+    wan_t2v = get_wan_t2v()
+    
 
     try:
         W = int(resolution.split("*")[0])
@@ -65,12 +171,26 @@ def t2v_generation(txt2vid_prompt, resolution, sd_steps, guide_scale,
             
             # 直接更新Gradio进度条
             try:
-                progress(progress_value, desc)
+                progress(progress_value, desc=desc)
             except Exception as e:
                 print(f"进度更新错误: {e}")
         
         # 直接调用模型生成，不使用多线程
         print(f"开始生成视频...")
+        
+        print(f"txt2vid_prompt: {txt2vid_prompt}")
+        print(f"resolution: {resolution}")
+        print(f"sd_steps: {sd_steps}")
+        print(f"guide_scale: {actual_guide_scale}")
+        print(f"shift_scale: {actual_shift}")
+        print(f"seed: {seed}")
+        print(f"n_prompt: {n_prompt}")
+        print(f"offload_model: {actual_offload}")
+        print(f"t5_cpu: {actual_t5_cpu}")
+        
+        # 开始生成前的进度更新
+        progress(0.05, desc="开始生成视频...")
+        
         video = wan_t2v.generate(
             txt2vid_prompt,
             size=(W, H),
@@ -98,6 +218,7 @@ def t2v_generation(txt2vid_prompt, resolution, sd_steps, guide_scale,
             value_range=(-1, 1))
         
         progress(1.0, desc="视频生成完成！")
+        
         
         return "example.mp4"
         
@@ -565,9 +686,13 @@ def gradio_interface():
                                 gr.Markdown('<h3 style="color: #4a90e2; font-size: 24px; margin-bottom: 15px; font-weight: 600;">正在生成视频...</h3>')
                                 gr.Markdown('<p style="font-size: 16px; line-height: 1.6; margin-bottom: 20px;">AI正在根据您的提示词创作视频，请稍候</p>')
                                 
-                                # 进度条
-                                with gr.Column(elem_classes="progress-container"):
-                                    progress_bar = gr.Progress()
+                                # 进度信息显示
+                                progress_info = gr.Textbox(
+                                    value="准备开始生成...",
+                                    label="生成进度",
+                                    interactive=False,
+                                    container=True
+                                )
                         
                         # 结果视频（隐藏，用于存储结果）
                         result_gallery = gr.Video(visible=False)
@@ -653,7 +778,7 @@ def gradio_interface():
                 seed, n_prompt, offload_model_ui
             ],
             outputs=[result_gallery],
-            show_progress=True  # 启用进度条显示
+            show_progress="full"  # 显示完整的进度条
         ).then(
             fn=on_generate_complete,
             outputs=[run_t2v_button, cancel_button, default_state, generating_state]
@@ -669,74 +794,16 @@ def gradio_interface():
 
 
 # Configuration
-def load_config():
-    """加载配置，支持环境变量和配置文件"""
-    import os
-    
-    config = {
-        # 默认配置
-        'ckpt_dir': os.environ.get('WAN_CKPT_DIR', '../Wan2.1-T2V-1.3B'),
-        'prompt_extend_method': os.environ.get('WAN_PROMPT_EXTEND_METHOD', 'none'),
-        'prompt_extend_model': os.environ.get('WAN_PROMPT_EXTEND_MODEL', None),
-        'offload_model': os.environ.get('WAN_OFFLOAD_MODEL', 'true').lower() == 'true',
-        't5_cpu': os.environ.get('WAN_T5_CPU', 'true').lower() == 'true',
-        'sample_shift': float(os.environ.get('WAN_SAMPLE_SHIFT', '8.0')),
-        'sample_guide_scale': float(os.environ.get('WAN_SAMPLE_GUIDE_SCALE', '6.0')),
-    }
-    
-    # 尝试从配置文件加载
-    config_file = os.environ.get('WAN_CONFIG_FILE', 'wan_config.json')
-    if os.path.exists(config_file):
-        try:
-            import json
-            with open(config_file, 'r', encoding='utf-8') as f:
-                file_config = json.load(f)
-                config.update(file_config)
-                print(f"✅ 从配置文件 {config_file} 加载配置")
-        except Exception as e:
-            print(f"⚠️ 配置文件加载失败: {e}")
-    
-    print("📋 当前配置:")
-    for key, value in config.items():
-        print(f"  {key}: {value}")
-    
-    return config
+# 配置管理已移至Config类
 
 
 if __name__ == '__main__':
-    # 加载配置
-    config = load_config()
-    globals()['config'] = config  # 将config设为全局变量，供其他函数使用
-
     print("Step1: Prompt extend disabled...", end='', flush=True)
     # 关闭prompt_extend功能
     print("done", flush=True)
 
-    print("Step2: Init 1.3B t2v model...", end='', flush=True)
-    cfg = WAN_CONFIGS['t2v-1.3B']
-
-    
-    # 调试：显示所有配置
-    print("\n=== 调试信息 ===")
-    print(f"config.offload_model: {config['offload_model']} (类型: {type(config['offload_model'])})")
-    print(f"config.t5_cpu: {config['t5_cpu']} (类型: {type(config['t5_cpu'])})")
-    print(f"config.sample_shift: {config['sample_shift']} (类型: {type(config['sample_shift'])})")
-    print(f"config.sample_guide_scale: {config['sample_guide_scale']} (类型: {type(config['sample_guide_scale'])})")
-    print("================\n")
-    
-    # T5 CPU设置：使用配置参数，默认为True（开启）
-    t5_cpu_setting = config['t5_cpu']
-    
-    # wan_t2v = wan.WanT2V(
-    #     config=cfg,
-    #     checkpoint_dir=config['ckpt_dir'],
-    #     device_id=0,
-    #     rank=0,
-    #     t5_fsdp=False,
-    #     dit_fsdp=False,
-    #     use_usp=False,
-    #     t5_cpu=t5_cpu_setting,  # 默认开启T5 CPU运行以节省显存
-    # )
+    print("Step2: 准备启动Gradio界面...")
+    # 模型将在首次使用时懒初始化
     print("done", flush=True)
 
     demo = gradio_interface()
